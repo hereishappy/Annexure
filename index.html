@@ -1,0 +1,587 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Material Management System</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        body {
+            box-sizing: border-box;
+        }
+        @media print {
+            .no-print { display: none !important; }
+            .print-only { display: block !important; }
+            body { font-size: 12px; }
+        }
+        .print-only { display: none; }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen">
+    <div class="container mx-auto px-4 py-6 max-w-6xl">
+        <!-- Header -->
+        <div class="bg-white rounded-lg shadow-lg p-6 mb-6">
+            <h1 class="text-2xl md:text-3xl font-bold text-gray-800 text-center mb-4">Material Management System</h1>
+            
+
+
+            <!-- Data Options -->
+            <div class="text-center mb-4">
+                <button onclick="loadGoogleSheet()" 
+                        class="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium">
+                    Refresh Sheet Data
+                </button>
+            </div>
+        </div>
+
+        <!-- Material Selection -->
+        <div class="bg-white rounded-lg shadow-lg p-6 mb-6">
+            <div class="mb-4">
+                <h2 class="text-xl font-semibold text-gray-800 mb-4">Select Materials</h2>
+                <div class="grid md:grid-cols-2 gap-4 mb-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Choose Material</label>
+                        <select id="materialSelect" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                            <option value="">Select a material...</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Quantity</label>
+                        <input type="number" id="quantityInput" min="1" value="1" 
+                               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                               placeholder="Enter quantity">
+                    </div>
+                </div>
+                <button onclick="addMaterial()" 
+                        class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium">
+                    Add Material
+                </button>
+            </div>
+        </div>
+
+        <!-- Selected Materials Table -->
+        <div class="bg-white rounded-lg shadow-lg overflow-hidden mb-6">
+            <div class="p-4 bg-gray-50 border-b">
+                <h2 class="text-xl font-semibold text-gray-800">Selected Materials</h2>
+            </div>
+            
+            <div class="overflow-x-auto">
+                <table class="w-full">
+                    <thead class="bg-gray-100">
+                        <tr>
+                            <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">SL NO.</th>
+                            <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Material Code</th>
+                            <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Material Name</th>
+                            <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Each Wt</th>
+                            <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">QTY</th>
+                            <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total Wt</th>
+                            <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="selectedMaterialsTable" class="bg-white divide-y divide-gray-200">
+                        <tr id="emptyState">
+                            <td colspan="7" class="px-3 py-8 text-center text-gray-500">
+                                No materials selected. Use the form above to add materials.
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Summary and Transport Info -->
+        <div class="grid md:grid-cols-2 gap-6 mb-6">
+            <!-- Summary -->
+            <div class="bg-white rounded-lg shadow-lg p-6">
+                <h3 class="text-lg font-semibold text-gray-800 mb-4">Summary</h3>
+                <div class="space-y-3">
+                    <div class="flex justify-between items-center p-3 bg-blue-50 rounded-lg">
+                        <span class="font-medium text-blue-800">Total QTY:</span>
+                        <span id="totalQty" class="font-bold text-blue-900">0</span>
+                    </div>
+                    <div class="flex justify-between items-center p-3 bg-green-50 rounded-lg">
+                        <span class="font-medium text-green-800">Total WT:</span>
+                        <span id="totalWt" class="font-bold text-green-900">0</span>
+                    </div>
+                    <div class="flex justify-between items-center p-3 bg-purple-50 rounded-lg">
+                        <span class="font-medium text-purple-800">Total MT:</span>
+                        <span id="totalMt" class="font-bold text-purple-900">0</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Transport Info -->
+            <div class="bg-white rounded-lg shadow-lg p-6">
+                <h3 class="text-lg font-semibold text-gray-800 mb-4">Transport Details</h3>
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Vehicle Number</label>
+                        <input type="text" id="vehicleNumber" 
+                               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                               placeholder="Enter vehicle number">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Transporter Name</label>
+                        <input type="text" id="transporterName" 
+                               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                               placeholder="Enter transporter name">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="no-print flex flex-col md:flex-row gap-4 justify-center">
+            <button onclick="generateReport()" 
+                    class="px-8 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-medium text-lg">
+                Generate Report
+            </button>
+            <button onclick="exportToPDF()" 
+                    class="px-8 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium text-lg">
+                Export PDF
+            </button>
+            <button onclick="exportToExcel()" 
+                    class="px-8 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium text-lg">
+                Export Excel
+            </button>
+        </div>
+
+        <!-- Report Section -->
+        <div id="reportSection" class="mt-8 bg-white rounded-lg shadow-lg p-6 hidden">
+            <div class="print-only text-center mb-6">
+                <h1 class="text-2xl font-bold">ANNEXURE</h1>
+            </div>
+            
+            <div class="no-print mb-4 text-center">
+                <h2 class="text-2xl font-bold text-gray-800">ANNEXURE</h2>
+            </div>
+
+            <div class="overflow-x-auto">
+                <table class="w-full border-collapse border border-gray-300">
+                    <thead>
+                        <tr class="bg-gray-100">
+                            <th class="border border-gray-300 px-3 py-2 text-left">SL NO.</th>
+                            <th class="border border-gray-300 px-3 py-2 text-left">Item Code</th>
+                            <th class="border border-gray-300 px-3 py-2 text-left">Item Name</th>
+                            <th class="border border-gray-300 px-3 py-2 text-left">Each Wt</th>
+                            <th class="border border-gray-300 px-3 py-2 text-left">QTY</th>
+                            <th class="border border-gray-300 px-3 py-2 text-left">TOTAL WT</th>
+                        </tr>
+                    </thead>
+                    <tbody id="reportTable">
+                        <!-- Report data will be populated here -->
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="mt-6 space-y-4">
+                <div class="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+                    <span class="font-bold">TOTAL:</span>
+                    <div class="flex gap-8">
+                        <span id="reportTotalQty" class="font-bold">0</span>
+                        <span id="reportTotalWt" class="font-bold">0</span>
+                    </div>
+                </div>
+                <div class="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+                    <span class="font-bold">TOTAL MT:</span>
+                    <span id="reportTotalMt" class="font-bold">0</span>
+                </div>
+            </div>
+
+            <div class="mt-8 space-y-4">
+                <div class="flex items-center">
+                    <span class="font-medium mr-4">VEHICLE NO.:</span>
+                    <span class="border-b border-gray-400 flex-1 pb-1" id="reportVehicleNo">_____________________</span>
+                </div>
+                <div class="flex items-center">
+                    <span class="font-medium mr-4">TRANSPORT NAME:</span>
+                    <span class="border-b border-gray-400 flex-1 pb-1" id="reportTransportName">___________________</span>
+                </div>
+            </div>
+
+            <div class="no-print mt-6 text-center">
+                <button onclick="window.print()" 
+                        class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium">
+                    Print Report
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let materialsData = [];
+        let selectedMaterials = [];
+
+        function loadSampleData() {
+            materialsData = [
+                { serial: 1, code: 'ME_CUP06070', name: 'BOARD BEARER 1.3M', weight: 13 },
+                { serial: 2, code: 'ME_CUP06071', name: 'BOARD BEARER 1.8M', weight: 17 },
+                { serial: 3, code: 'ME_CUP06072', name: 'BOARD BEARER 2.5M', weight: 22.6 },
+                { serial: 4, code: 'ME_CUP01055', name: 'CUPLOK LOOSE SPIGOT GALV', weight: 0.82 },
+                { serial: 5, code: 'ME_CUP01056', name: 'STANDARD CUPLOK', weight: 2.5 },
+                { serial: 6, code: 'ME_CUP01057', name: 'LEDGER BLADE', weight: 1.8 }
+            ];
+            populateMaterialSelect();
+        }
+
+        function loadGoogleSheet() {
+            // Use the direct CSV URL provided by the user
+            const csvUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSq3PMZj2xLcrH7DkdCG39hjp1ytu-aoxPSYwFbbEcRwtyn8sPJlMx_L0tvSBNmijpY-XLNSpTBfrzL/pub?output=csv';
+
+            console.log('Loading from:', csvUrl);
+            
+            fetch(csvUrl)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Sheet not accessible.');
+                    }
+                    return response.text();
+                })
+                .then(data => {
+                    console.log('CSV Data received:', data.substring(0, 200) + '...');
+                    parseCSVData(data);
+                    populateMaterialSelect();
+                    showNotification('✅ Google Sheet data loaded successfully!', 'success');
+                })
+                .catch(error => {
+                    console.error('Error loading sheet:', error);
+                    showNotification('❌ Error loading Google Sheet. Please try again.', 'error');
+                });
+        }
+
+        function showNotification(message, type) {
+            const notification = document.createElement('div');
+            notification.className = `fixed top-4 right-4 px-6 py-3 rounded-lg shadow-lg z-50 ${
+                type === 'success' ? 'bg-green-500 text-white' : 'bg-red-500 text-white'
+            }`;
+            notification.textContent = message;
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                notification.remove();
+            }, 3000);
+        }
+
+        function parseCSVData(csvData) {
+            const lines = csvData.split('\n');
+            materialsData = [];
+            
+            // Skip header row and parse data
+            for (let i = 1; i < lines.length; i++) {
+                const line = lines[i].trim();
+                if (line) {
+                    const columns = line.split(',');
+                    if (columns.length >= 4) {
+                        materialsData.push({
+                            serial: columns[0].replace(/"/g, ''),
+                            code: columns[1].replace(/"/g, ''),
+                            name: columns[2].replace(/"/g, ''),
+                            weight: parseFloat(columns[3].replace(/"/g, '')) || 0
+                        });
+                    }
+                }
+            }
+        }
+
+        function populateMaterialSelect() {
+            const select = document.getElementById('materialSelect');
+            select.innerHTML = '<option value="">Select a material...</option>';
+            
+            materialsData.forEach((material, index) => {
+                const option = document.createElement('option');
+                option.value = index;
+                option.textContent = `${material.code} - ${material.name}`;
+                select.appendChild(option);
+            });
+        }
+
+        function addMaterial() {
+            const selectElement = document.getElementById('materialSelect');
+            const quantityInput = document.getElementById('quantityInput');
+            
+            const selectedIndex = selectElement.value;
+            const quantity = parseInt(quantityInput.value) || 0;
+            
+            if (selectedIndex === '' || quantity <= 0) {
+                showNotification('❌ Please select a material and enter a valid quantity.', 'error');
+                return;
+            }
+            
+            const material = materialsData[selectedIndex];
+            
+            // Check if material already exists in selected list
+            const existingIndex = selectedMaterials.findIndex(item => item.code === material.code);
+            
+            if (existingIndex >= 0) {
+                // Update existing material quantity
+                selectedMaterials[existingIndex].quantity += quantity;
+            } else {
+                // Add new material
+                selectedMaterials.push({
+                    ...material,
+                    quantity: quantity,
+                    weight: material.weight
+                });
+            }
+            
+            renderSelectedMaterials();
+            updateCalculations();
+            
+            // Reset form
+            selectElement.value = '';
+            quantityInput.value = '1';
+            
+            showNotification('✅ Material added successfully!', 'success');
+        }
+
+        function renderSelectedMaterials() {
+            const tbody = document.getElementById('selectedMaterialsTable');
+            tbody.innerHTML = '';
+            
+            if (selectedMaterials.length === 0) {
+                tbody.innerHTML = `
+                    <tr id="emptyState">
+                        <td colspan="7" class="px-3 py-8 text-center text-gray-500">
+                            No materials selected. Use the form above to add materials.
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            selectedMaterials.forEach((material, index) => {
+                const totalWeight = material.quantity * material.weight;
+                const row = document.createElement('tr');
+                row.className = 'hover:bg-gray-50';
+                row.innerHTML = `
+                    <td class="px-3 py-4 whitespace-nowrap text-sm text-gray-900">${index + 1}</td>
+                    <td class="px-3 py-4 whitespace-nowrap text-sm text-gray-900">${material.code}</td>
+                    <td class="px-3 py-4 text-sm text-gray-900">${material.name}</td>
+                    <td class="px-3 py-4 whitespace-nowrap">
+                        <input type="number" 
+                               class="w-20 px-2 py-1 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent text-center"
+                               min="0" 
+                               step="0.01"
+                               value="${material.weight}"
+                               onchange="updateMaterialWeight(${index}, this.value)"
+                               id="weight_${index}">
+                    </td>
+                    <td class="px-3 py-4 whitespace-nowrap">
+                        <input type="number" 
+                               class="w-20 px-2 py-1 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent text-center"
+                               min="1" 
+                               value="${material.quantity}"
+                               onchange="updateMaterialQuantity(${index}, this.value)"
+                               id="qty_${index}">
+                    </td>
+                    <td class="px-3 py-4 whitespace-nowrap text-sm text-gray-900 font-medium" id="total_${index}">${totalWeight.toFixed(2)}</td>
+                    <td class="px-3 py-4 whitespace-nowrap">
+                        <button onclick="removeMaterial(${index})" 
+                                class="px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600 transition-colors text-sm">
+                            Remove
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        function updateMaterialWeight(index, newWeight) {
+            selectedMaterials[index].weight = parseFloat(newWeight) || 0;
+            updateCalculations();
+        }
+
+        function updateMaterialQuantity(index, newQuantity) {
+            selectedMaterials[index].quantity = parseInt(newQuantity) || 1;
+            renderSelectedMaterials();
+            updateCalculations();
+        }
+
+        function removeMaterial(index) {
+            selectedMaterials.splice(index, 1);
+            renderSelectedMaterials();
+            updateCalculations();
+            showNotification('✅ Material removed successfully!', 'success');
+        }
+
+        function updateCalculations() {
+            let totalQty = 0;
+            let totalWt = 0;
+
+            selectedMaterials.forEach((material, index) => {
+                const totalWeight = material.quantity * material.weight;
+                
+                // Update the total weight display in the table
+                const totalCell = document.getElementById(`total_${index}`);
+                if (totalCell) {
+                    totalCell.textContent = totalWeight.toFixed(2);
+                }
+                
+                totalQty += material.quantity;
+                totalWt += totalWeight;
+            });
+
+            const totalMt = totalWt / 1000;
+
+            document.getElementById('totalQty').textContent = totalQty;
+            document.getElementById('totalWt').textContent = totalWt.toFixed(2);
+            document.getElementById('totalMt').textContent = totalMt.toFixed(3);
+        }
+
+        function generateReport() {
+            if (selectedMaterials.length === 0) {
+                showNotification('❌ Please select at least one material to generate a report.', 'error');
+                return;
+            }
+
+            const reportTable = document.getElementById('reportTable');
+            const vehicleNo = document.getElementById('vehicleNumber').value || '_____________________';
+            const transportName = document.getElementById('transporterName').value || '___________________';
+
+            reportTable.innerHTML = '';
+            
+            let reportTotalQty = 0;
+            let reportTotalWt = 0;
+
+            selectedMaterials.forEach((material, index) => {
+                const totalWeight = material.quantity * material.weight;
+                reportTotalQty += material.quantity;
+                reportTotalWt += totalWeight;
+
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td class="border border-gray-300 px-3 py-2">${index + 1}</td>
+                    <td class="border border-gray-300 px-3 py-2">${material.code}</td>
+                    <td class="border border-gray-300 px-3 py-2">${material.name}</td>
+                    <td class="border border-gray-300 px-3 py-2">${material.weight}</td>
+                    <td class="border border-gray-300 px-3 py-2">${material.quantity}</td>
+                    <td class="border border-gray-300 px-3 py-2">${totalWeight.toFixed(2)}</td>
+                `;
+                reportTable.appendChild(row);
+            });
+
+            const reportTotalMt = reportTotalWt / 1000;
+
+            document.getElementById('reportTotalQty').textContent = reportTotalQty;
+            document.getElementById('reportTotalWt').textContent = reportTotalWt.toFixed(2);
+            document.getElementById('reportTotalMt').textContent = reportTotalMt.toFixed(3);
+            document.getElementById('reportVehicleNo').textContent = vehicleNo;
+            document.getElementById('reportTransportName').textContent = transportName;
+
+            document.getElementById('reportSection').classList.remove('hidden');
+            document.getElementById('reportSection').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function exportToPDF() {
+            generateReport();
+            setTimeout(() => {
+                const { jsPDF } = window.jspdf;
+                const doc = new jsPDF();
+                
+                doc.setFontSize(16);
+                doc.text('ANNEXURE', 105, 20, { align: 'center' });
+                
+                // Get report data
+                const reportData = [];
+                const reportRows = document.querySelectorAll('#reportTable tr');
+                
+                reportRows.forEach(row => {
+                    const cells = row.querySelectorAll('td');
+                    if (cells.length > 0) {
+                        reportData.push([
+                            cells[0].textContent,
+                            cells[1].textContent,
+                            cells[2].textContent,
+                            cells[3].textContent,
+                            cells[4].textContent,
+                            cells[5].textContent
+                        ]);
+                    }
+                });
+
+                // Add table headers
+                doc.setFontSize(10);
+                let y = 40;
+                doc.text('SL NO.', 10, y);
+                doc.text('Item Code', 30, y);
+                doc.text('Item Name', 70, y);
+                doc.text('Each Wt', 130, y);
+                doc.text('QTY', 150, y);
+                doc.text('TOTAL WT', 170, y);
+                
+                y += 10;
+                
+                // Add data rows
+                reportData.forEach(row => {
+                    doc.text(row[0], 10, y);
+                    doc.text(row[1], 30, y);
+                    doc.text(row[2], 70, y);
+                    doc.text(row[3], 130, y);
+                    doc.text(row[4], 150, y);
+                    doc.text(row[5], 170, y);
+                    y += 8;
+                });
+
+                // Add totals
+                y += 10;
+                doc.text(`TOTAL: ${document.getElementById('reportTotalQty').textContent} ${document.getElementById('reportTotalWt').textContent}`, 10, y);
+                y += 8;
+                doc.text(`TOTAL MT: ${document.getElementById('reportTotalMt').textContent}`, 10, y);
+                
+                // Add transport info
+                y += 20;
+                doc.text(`VEHICLE NO.: ${document.getElementById('reportVehicleNo').textContent}`, 10, y);
+                y += 8;
+                doc.text(`TRANSPORT NAME: ${document.getElementById('reportTransportName').textContent}`, 10, y);
+
+                doc.save('material-report.pdf');
+            }, 100);
+        }
+
+        function exportToExcel() {
+            generateReport();
+            setTimeout(() => {
+                const wb = XLSX.utils.book_new();
+                
+                // Prepare data for Excel
+                const excelData = [
+                    ['ANNEXURE'],
+                    [],
+                    ['SL NO.', 'Item Code', 'Item Name', 'Each Wt', 'QTY', 'TOTAL WT']
+                ];
+
+                const reportRows = document.querySelectorAll('#reportTable tr');
+                reportRows.forEach(row => {
+                    const cells = row.querySelectorAll('td');
+                    if (cells.length > 0) {
+                        excelData.push([
+                            cells[0].textContent,
+                            cells[1].textContent,
+                            cells[2].textContent,
+                            parseFloat(cells[3].textContent),
+                            parseInt(cells[4].textContent),
+                            parseFloat(cells[5].textContent)
+                        ]);
+                    }
+                });
+
+                excelData.push([]);
+                excelData.push(['TOTAL', '', '', '', document.getElementById('reportTotalQty').textContent, document.getElementById('reportTotalWt').textContent]);
+                excelData.push(['TOTAL MT', '', '', '', '', document.getElementById('reportTotalMt').textContent]);
+                excelData.push([]);
+                excelData.push(['VEHICLE NO.', document.getElementById('reportVehicleNo').textContent]);
+                excelData.push(['TRANSPORT NAME', document.getElementById('reportTransportName').textContent]);
+
+                const ws = XLSX.utils.aoa_to_sheet(excelData);
+                XLSX.utils.book_append_sheet(wb, ws, 'Material Report');
+                XLSX.writeFile(wb, 'material-report.xlsx');
+            }, 100);
+        }
+
+        // Initialize by loading Google Sheet data automatically
+        loadGoogleSheet();
+    </script>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'98a3592ff47b3a37',t:'MTc1OTczNDcyNS4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>

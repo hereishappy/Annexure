@@ -17,6 +17,11 @@
             body { font-size: 12px; }
             .container { max-width: none !important; padding: 0 !important; }
             #reportSection { margin: 0 !important; box-shadow: none !important; border-radius: 0 !important; }
+            table { border-collapse: collapse !important; }
+            th, td { border: 1px solid #000 !important; padding: 8px !important; }
+            .item-name { word-wrap: break-word !important; word-break: break-word !important; max-width: 200px !important; white-space: normal !important; }
+            .bg-gray-100 { background-color: #f3f4f6 !important; -webkit-print-color-adjust: exact !important; }
+            .bg-gray-50 { background-color: #f9fafb !important; -webkit-print-color-adjust: exact !important; }
         }
         .print-only { display: none; }
     </style>
@@ -456,7 +461,7 @@
                 row.innerHTML = `
                     <td class="border border-gray-300 px-3 py-2">${index + 1}</td>
                     <td class="border border-gray-300 px-3 py-2">${material.code}</td>
-                    <td class="border border-gray-300 px-3 py-2">${material.name}</td>
+                    <td class="border border-gray-300 px-3 py-2 item-name">${material.name}</td>
                     <td class="border border-gray-300 px-3 py-2">${material.weight}</td>
                     <td class="border border-gray-300 px-3 py-2">${material.quantity}</td>
                     <td class="border border-gray-300 px-3 py-2">${totalWeight.toFixed(2)}</td>
@@ -585,5 +590,5 @@
         // Initialize by loading Google Sheet data automatically
         loadGoogleSheet();
     </script>
-<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'98a40397a0584463',t:'MTc1OTc0MTcwNS4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'98a41ef8c04e3fba',t:'MTc1OTc0MjgyNy4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>

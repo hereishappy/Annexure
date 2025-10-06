@@ -479,116 +479,132 @@
 
             document.getElementById('reportSection').classList.remove('hidden');
             document.getElementById('reportSection').scrollIntoView({ behavior: 'smooth' });
+            
+            // Auto-download PDF after generating the report
+            setTimeout(() => {
+                exportToPDF();
+            }, 500);
+            
+            // Auto-download PDF after generating the report
+            setTimeout(() => {
+                exportToPDF();
+            }, 500);
         }
 
         function exportToPDF() {
-            generateReport();
-            setTimeout(() => {
-                const { jsPDF } = window.jspdf;
-                const doc = new jsPDF();
-                
-                doc.setFontSize(16);
-                doc.text('ANNEXURE', 105, 20, { align: 'center' });
-                
-                // Get report data
-                const reportData = [];
-                const reportRows = document.querySelectorAll('#reportTable tr');
-                
-                reportRows.forEach(row => {
-                    const cells = row.querySelectorAll('td');
-                    if (cells.length > 0) {
-                        reportData.push([
-                            cells[0].textContent,
-                            cells[1].textContent,
-                            cells[2].textContent,
-                            cells[3].textContent,
-                            cells[4].textContent,
-                            cells[5].textContent
-                        ]);
-                    }
-                });
+            if (selectedMaterials.length === 0) {
+                showNotification('❌ Please select at least one material to export.', 'error');
+                return;
+            }
 
-                // Add table headers
-                doc.setFontSize(10);
-                let y = 40;
-                doc.text('SL NO.', 10, y);
-                doc.text('Item Code', 30, y);
-                doc.text('Item Name', 70, y);
-                doc.text('Each Wt', 130, y);
-                doc.text('QTY', 150, y);
-                doc.text('TOTAL WT', 170, y);
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            
+            // Title
+            doc.setFontSize(16);
+            doc.text('ANNEXURE', 105, 20, { align: 'center' });
+            
+            // Table headers
+            doc.setFontSize(10);
+            let y = 40;
+            doc.text('SL NO.', 10, y);
+            doc.text('Item Code', 30, y);
+            doc.text('Item Name', 70, y);
+            doc.text('Each Wt', 130, y);
+            doc.text('QTY', 150, y);
+            doc.text('TOTAL WT', 170, y);
+            
+            y += 10;
+            
+            // Add data rows from selectedMaterials
+            let totalQty = 0;
+            let totalWt = 0;
+            
+            selectedMaterials.forEach((material, index) => {
+                const totalWeight = material.quantity * material.weight;
+                totalQty += material.quantity;
+                totalWt += totalWeight;
                 
-                y += 10;
-                
-                // Add data rows
-                reportData.forEach(row => {
-                    doc.text(row[0], 10, y);
-                    doc.text(row[1], 30, y);
-                    doc.text(row[2], 70, y);
-                    doc.text(row[3], 130, y);
-                    doc.text(row[4], 150, y);
-                    doc.text(row[5], 170, y);
-                    y += 8;
-                });
-
-                // Add totals
-                y += 10;
-                doc.text(`TOTAL: ${document.getElementById('reportTotalQty').textContent} ${document.getElementById('reportTotalWt').textContent}`, 10, y);
+                doc.text((index + 1).toString(), 10, y);
+                doc.text(material.code, 30, y);
+                doc.text(material.name, 70, y);
+                doc.text(material.weight.toString(), 130, y);
+                doc.text(material.quantity.toString(), 150, y);
+                doc.text(totalWeight.toFixed(2), 170, y);
                 y += 8;
-                doc.text(`TOTAL MT: ${document.getElementById('reportTotalMt').textContent}`, 10, y);
-                
-                // Add transport info
-                y += 20;
-                doc.text(`VEHICLE NO.: ${document.getElementById('reportVehicleNo').textContent}`, 10, y);
-                y += 8;
-                doc.text(`TRANSPORT NAME: ${document.getElementById('reportTransportName').textContent}`, 10, y);
+            });
 
-                doc.save('material-report.pdf');
-            }, 100);
+            // Add totals
+            y += 10;
+            doc.text(`TOTAL: ${totalQty} ${totalWt.toFixed(2)}`, 10, y);
+            y += 8;
+            doc.text(`TOTAL MT: ${(totalWt / 1000).toFixed(3)}`, 10, y);
+            
+            // Add transport info
+            const vehicleNo = document.getElementById('vehicleNumber').value || '_____________________';
+            const transportName = document.getElementById('transporterName').value || '___________________';
+            
+            y += 20;
+            doc.text(`VEHICLE NO.: ${vehicleNo}`, 10, y);
+            y += 8;
+            doc.text(`TRANSPORT NAME: ${transportName}`, 10, y);
+
+            doc.save('material-report.pdf');
+            showNotification('✅ PDF exported successfully!', 'success');
         }
 
         function exportToExcel() {
-            generateReport();
-            setTimeout(() => {
-                const wb = XLSX.utils.book_new();
+            if (selectedMaterials.length === 0) {
+                showNotification('❌ Please select at least one material to export.', 'error');
+                return;
+            }
+
+            const wb = XLSX.utils.book_new();
+            
+            // Prepare data for Excel
+            const excelData = [
+                ['ANNEXURE'],
+                [],
+                ['SL NO.', 'Item Code', 'Item Name', 'Each Wt', 'QTY', 'TOTAL WT']
+            ];
+
+            let totalQty = 0;
+            let totalWt = 0;
+
+            selectedMaterials.forEach((material, index) => {
+                const totalWeight = material.quantity * material.weight;
+                totalQty += material.quantity;
+                totalWt += totalWeight;
                 
-                // Prepare data for Excel
-                const excelData = [
-                    ['ANNEXURE'],
-                    [],
-                    ['SL NO.', 'Item Code', 'Item Name', 'Each Wt', 'QTY', 'TOTAL WT']
-                ];
+                excelData.push([
+                    index + 1,
+                    material.code,
+                    material.name,
+                    material.weight,
+                    material.quantity,
+                    parseFloat(totalWeight.toFixed(2))
+                ]);
+            });
 
-                const reportRows = document.querySelectorAll('#reportTable tr');
-                reportRows.forEach(row => {
-                    const cells = row.querySelectorAll('td');
-                    if (cells.length > 0) {
-                        excelData.push([
-                            cells[0].textContent,
-                            cells[1].textContent,
-                            cells[2].textContent,
-                            parseFloat(cells[3].textContent),
-                            parseInt(cells[4].textContent),
-                            parseFloat(cells[5].textContent)
-                        ]);
-                    }
-                });
+            excelData.push([]);
+            excelData.push(['TOTAL', '', '', '', totalQty, parseFloat(totalWt.toFixed(2))]);
+            excelData.push(['TOTAL MT', '', '', '', '', parseFloat((totalWt / 1000).toFixed(3))]);
+            excelData.push([]);
+            
+            const vehicleNo = document.getElementById('vehicleNumber').value || '_____________________';
+            const transportName = document.getElementById('transporterName').value || '___________________';
+            
+            excelData.push(['VEHICLE NO.', vehicleNo]);
+            excelData.push(['TRANSPORT NAME', transportName]);
 
-                excelData.push([]);
-                excelData.push(['TOTAL', '', '', '', document.getElementById('reportTotalQty').textContent, document.getElementById('reportTotalWt').textContent]);
-                excelData.push(['TOTAL MT', '', '', '', '', document.getElementById('reportTotalMt').textContent]);
-                excelData.push([]);
-                excelData.push(['VEHICLE NO.', document.getElementById('reportVehicleNo').textContent]);
-                excelData.push(['TRANSPORT NAME', document.getElementById('reportTransportName').textContent]);
-
-                const ws = XLSX.utils.aoa_to_sheet(excelData);
-                XLSX.utils.book_append_sheet(wb, ws, 'Material Report');
-                XLSX.writeFile(wb, 'material-report.xlsx');
-            }, 100);
+            const ws = XLSX.utils.aoa_to_sheet(excelData);
+            XLSX.utils.book_append_sheet(wb, ws, 'Material Report');
+            XLSX.writeFile(wb, 'material-report.xlsx');
+            showNotification('✅ Excel exported successfully!', 'success');
         }
 
         // Initialize by loading Google Sheet data automatically
         loadGoogleSheet();
     </script>
-<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'98a41ef8c04e3fba',t:'MTc1OTc0MjgyNy4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'98a438c9d6d53a37',t:'MTc1OTc0Mzg4NC4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>

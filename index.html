@@ -5,8 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Material Management System</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <style>
         body {
             box-sizing: border-box;
@@ -144,14 +144,6 @@
             <button onclick="generateReport()" 
                     class="px-8 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-medium text-lg">
                 Generate Report
-            </button>
-            <button onclick="exportToPDF()" 
-                    class="px-8 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium text-lg">
-                Export PDF
-            </button>
-            <button onclick="exportToExcel()" 
-                    class="px-8 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium text-lg">
-                Export Excel
             </button>
         </div>
 
@@ -480,77 +472,43 @@
             document.getElementById('reportSection').classList.remove('hidden');
             document.getElementById('reportSection').scrollIntoView({ behavior: 'smooth' });
             
-            // Auto-download PDF after generating the report
+            // Auto-download Excel and JPG after generating the report
             setTimeout(() => {
-                exportToPDF();
-            }, 500);
-            
-            // Auto-download PDF after generating the report
-            setTimeout(() => {
-                exportToPDF();
+                exportToExcel();
+                setTimeout(() => {
+                    exportToJPG();
+                }, 1000);
             }, 500);
         }
 
-        function exportToPDF() {
+        function exportToJPG() {
             if (selectedMaterials.length === 0) {
                 showNotification('❌ Please select at least one material to export.', 'error');
                 return;
             }
 
-            const { jsPDF } = window.jspdf;
-            const doc = new jsPDF();
+            const reportSection = document.getElementById('reportSection');
             
-            // Title
-            doc.setFontSize(16);
-            doc.text('ANNEXURE', 105, 20, { align: 'center' });
-            
-            // Table headers
-            doc.setFontSize(10);
-            let y = 40;
-            doc.text('SL NO.', 10, y);
-            doc.text('Item Code', 30, y);
-            doc.text('Item Name', 70, y);
-            doc.text('Each Wt', 130, y);
-            doc.text('QTY', 150, y);
-            doc.text('TOTAL WT', 170, y);
-            
-            y += 10;
-            
-            // Add data rows from selectedMaterials
-            let totalQty = 0;
-            let totalWt = 0;
-            
-            selectedMaterials.forEach((material, index) => {
-                const totalWeight = material.quantity * material.weight;
-                totalQty += material.quantity;
-                totalWt += totalWeight;
+            html2canvas(reportSection, {
+                backgroundColor: '#ffffff',
+                scale: 2,
+                useCORS: true,
+                allowTaint: true
+            }).then(canvas => {
+                // Convert canvas to JPG
+                const imgData = canvas.toDataURL('image/jpeg', 0.9);
                 
-                doc.text((index + 1).toString(), 10, y);
-                doc.text(material.code, 30, y);
-                doc.text(material.name, 70, y);
-                doc.text(material.weight.toString(), 130, y);
-                doc.text(material.quantity.toString(), 150, y);
-                doc.text(totalWeight.toFixed(2), 170, y);
-                y += 8;
+                // Create download link
+                const link = document.createElement('a');
+                link.download = 'material-report.jpg';
+                link.href = imgData;
+                link.click();
+                
+                showNotification('✅ JPG exported successfully!', 'success');
+            }).catch(error => {
+                console.error('Error generating JPG:', error);
+                showNotification('❌ Error generating JPG. Please try again.', 'error');
             });
-
-            // Add totals
-            y += 10;
-            doc.text(`TOTAL: ${totalQty} ${totalWt.toFixed(2)}`, 10, y);
-            y += 8;
-            doc.text(`TOTAL MT: ${(totalWt / 1000).toFixed(3)}`, 10, y);
-            
-            // Add transport info
-            const vehicleNo = document.getElementById('vehicleNumber').value || '_____________________';
-            const transportName = document.getElementById('transporterName').value || '___________________';
-            
-            y += 20;
-            doc.text(`VEHICLE NO.: ${vehicleNo}`, 10, y);
-            y += 8;
-            doc.text(`TRANSPORT NAME: ${transportName}`, 10, y);
-
-            doc.save('material-report.pdf');
-            showNotification('✅ PDF exported successfully!', 'success');
         }
 
         function exportToExcel() {
@@ -606,5 +564,5 @@
         // Initialize by loading Google Sheet data automatically
         loadGoogleSheet();
     </script>
-<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'98a438c9d6d53a37',t:'MTc1OTc0Mzg4NC4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'98a4c95f279b85b4',t:'MTc1OTc0OTgwNi4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
